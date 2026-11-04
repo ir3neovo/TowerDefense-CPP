@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include "GameMap.hpp"
 
 int main()
 {
@@ -21,6 +22,8 @@ int main()
         static_cast<float>(TILE_SIZE - 1)
     });
 
+	GameMap gameMap;
+
     while (window.isOpen())
     {
         while (const auto event = window.pollEvent())
@@ -31,51 +34,13 @@ int main()
             }
         }
 
-		// get mouse position relative to the window.
-        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-
-        // convert pixel coord to grid coord
-        int hoveredCol = mousePos.x / TILE_SIZE;
-        int hoveredRow = mousePos.y / TILE_SIZE;
-
-        // check whether the mouse is inside the grid
-        bool mouseInside =
-            mousePos.x >= 0 &&
-            mousePos.y >= 0 &&
-            mousePos.x < static_cast<int>(WINDOW_WIDTH) &&
-            mousePos.y < static_cast<int>(WINDOW_HEIGHT);
+		auto hovered = gameMap.pixelToCell(
+            sf::Mouse::getPosition(window)
+        );
 
         window.clear(sf::Color(30, 35, 40));
 
-        // Draw a 20 x 15 tile grid.
-        for (int row = 0; row < 15; ++row)
-        {
-            for (int col = 0; col < 20; ++col)
-            {
-                tile.setPosition({
-                    static_cast<float>(col * TILE_SIZE),
-                    static_cast<float>(row * TILE_SIZE)
-                });
-
-                // Highlight the tile under the mouse.
-                if (mouseInside &&
-                    row == hoveredRow &&
-                    col == hoveredCol)
-                {
-                    tile.setFillColor(
-                        sf::Color(180, 210, 140)
-                    );
-                }
-                else
-                {
-                    tile.setFillColor(
-                        sf::Color(70, 95, 75)
-                    );
-                }
-                window.draw(tile);
-            }
-        }
-
+        gameMap.draw(window, hovered);
         window.display();
     }
 
