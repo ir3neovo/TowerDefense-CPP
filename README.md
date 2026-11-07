@@ -65,12 +65,14 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-CTest runs two suites without opening a game window:
+CTest reports 16 named regression cases without opening a game window:
 
-- `gameplay`: route continuity and interpolation, placement bounds, occupied tiles, insufficient currency, pause, a winning layout, undefended defeat, reward accounting, and restart.
-- `enemy_behavior`: shield front/side/rear damage and turning, healing triage/range/cooldowns/health limits, scout warnings/sprints/coverage changes, healer-priority targeting with fallback, and integrated mixed-wave encounters.
+- 10 gameplay cases: route continuity, interpolation, map boundaries, placement rules, economy, pause/resume, victory, defeat, terminal-state stability, and restart.
+- 6 enemy-behavior cases: shield facing, healer triage, scout coverage, targeting and mixed waves, scout cooldown cycles, and healer cast cycles.
 
-Both static and shared SFML configurations are covered by CI. Locally, both suites pass in both Windows configurations.
+Timing regressions check warning, dash, cast, and cooldown durations with fixed-timestep tolerances. Each case can also run independently with CTest's `-R` filter.
+
+All 16 cases pass locally with static SFML and with shared SFML on Windows (32 case executions, 16 distinct cases). GitHub Actions configures 8 build variants across Windows, Linux, and macOS, combining static/shared linkage with its platform/compiler entries. Local validation does not establish the status of every CI job.
 
 ## Next possibilities
 

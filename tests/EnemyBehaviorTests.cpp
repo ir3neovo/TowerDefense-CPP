@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include "TestRunner.hpp"
 #include "EnemyBehavior.hpp"
 #include <array>
 #include <iostream>
@@ -121,9 +122,76 @@ void targetingAndWave() {
     require(game.blockedDamage() == 0 && game.healedHealth() == 0 && game.scoutDashes() == 0, "Restart clears behavior statistics");
 }
 
-int main() {
-    try { shields(); healers(); scouts(); targetingAndWave(); }
-    catch (const std::exception& error) { std::cerr << error.what() << '\n'; return 1; }
-    std::cout << "Shield facing, healing triage, scouting, targeting and mixed wave passed\n";
+
+void scoutCooldownCycle() {
+    GameMap map;
+    std::vector<Enemy> enemies{EnemyBehavior::makeEnemy(EnemyKind::Scout)};
+    enemies[0].distance = 120.f;
+    std::vector<Shot> effects;
+    constexpr float tick = 1.f / 60.f;
+    int dashes = 0;
+    float warningTime = 0.f;
+    EnemyBehavior::update(0, enemies, {}, map, Game::RANGE, tick, effects);
+    while (enemies[0].state == EnemyState::Warning && warningTime < 2.f) {
+        auto events = EnemyBehavior::update(0, enemies, {}, map, Game::RANGE, tick, effects);
+        if (events.beganDash) ++dashes;
+        warningTime += tick;
+    }
+    require(enemies[0].state == EnemyState::Dashing && dashes == 1, "Warning starts exactly one dash");
+    require(warningTime >= EnemyBehavior::SCOUT_WARNING - tick && warningTime <= EnemyBehavior::SCOUT_WARNING + tick * 2,
+            "Warning must last its configured duration within timestep tolerance");
+    float dashTime = 0.f;
+    while (enemies[0].state == EnemyState::Dashing && dashTime < 3.f) {
+        const auto events = EnemyBehavior::update(0, enemies, {}, map, Game::RANGE, tick, effects);
+        require(!events.beganDash, "A running dash cannot count as another activation");
+        dashTime += tick;
+    }
+    require(enemies[0].state == EnemyState::Scouting, "Dash expires without needing tower coverage");
+    require(dashTime >= EnemyBehavior::SCOUT_DASH_TIME - tick && dashTime <= EnemyBehavior::SCOUT_DASH_TIME + tick * 2,
+            "Dash duration must match configuration");
+    require(EnemyBehavior::movementSpeed(enemies[0]) == 70.f, "Expired dash restores normal speed");
+    float cooldownTime = 0.f;
+    while (enemies[0].state == EnemyState::Scouting && cooldownTime < 4.f) {
+        EnemyBehavior::update(0, enemies, {}, map, Game::RANGE, tick, effects);
+        cooldownTime += tick;
+    }
+    require(enemies[0].state == EnemyState::Warning, "Scout warns again after cooldown");
+    require(cooldownTime >= EnemyBehavior::SCOUT_COOLDOWN - tick && cooldownTime <= EnemyBehavior::SCOUT_COOLDOWN + tick * 2,
+            "Scout cannot skip its cooldown");
 }
 
+void healerCastCycle() {
+    GameMap map;
+    std::vector<Enemy> enemies{EnemyBehavior::makeEnemy(EnemyKind::Healer), EnemyBehavior::makeEnemy(EnemyKind::Grunt)};
+    for (auto& enemy : enemies) enemy.distance = 100.f;
+    enemies[1].health = 1;
+    std::vector<Shot> effects;
+    constexpr float tick = 1.f / 60.f;
+    EnemyBehavior::update(0, enemies, {}, map, Game::RANGE, tick, effects);
+    require(enemies[1].health == 13 && enemies[0].state == EnemyState::Healing, "Healing begins immediately and pauses movement");
+    float elapsed = 0.f;
+    while (enemies[0].state == EnemyState::Healing && elapsed < 1.f) {
+        EnemyBehavior::update(0, enemies, {}, map, Game::RANGE, tick, effects);
+        elapsed += tick;
+    }
+    require(enemies[0].state == EnemyState::Marching && EnemyBehavior::movementSpeed(enemies[0]) == 70.f,
+            "Healer resumes marching after its cast");
+    require(elapsed >= EnemyBehavior::HEAL_CAST_TIME - tick && elapsed <= EnemyBehavior::HEAL_CAST_TIME + tick * 2,
+            "Healing cast duration must match configuration");
+    require(enemies[1].health == 13 && enemies[0].abilityCooldown > 0.f, "Resuming movement must not bypass heal cooldown");
+    while (effects.size() == 1 && elapsed < 3.f) {
+        EnemyBehavior::update(0, enemies, {}, map, Game::RANGE, tick, effects);
+        elapsed += tick;
+    }
+    require(effects.size() == 2 && enemies[1].health == 25, "Exactly one new heal after cooldown");
+    require(elapsed >= EnemyBehavior::HEAL_COOLDOWN - tick && elapsed <= EnemyBehavior::HEAL_COOLDOWN + tick * 2,
+            "Heals must respect the full cooldown");
+}
+
+int main(int argc, char** argv) {
+    return runTests(argc, argv, {
+        {"shield_facing", shields}, {"healer_triage", healers}, {"scout_coverage", scouts},
+        {"targeting_and_mixed_wave", targetingAndWave}, {"scout_cooldown_cycle", scoutCooldownCycle},
+        {"healer_cast_cycle", healerCastCycle}
+    });
+}
