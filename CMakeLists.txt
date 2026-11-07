@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(CMakeSFMLProject LANGUAGES CXX)
+project(TowerDefense LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -13,13 +13,24 @@ FetchContent_Declare(SFML
     SYSTEM)
 FetchContent_MakeAvailable(SFML)
 
-add_executable(main
-    src/main.cpp
-    src/GameMap.cpp
-)
+add_library(game_logic src/Game.cpp src/GameMap.cpp)
+target_include_directories(game_logic PUBLIC include)
+target_compile_features(game_logic PUBLIC cxx_std_17)
+target_link_libraries(game_logic PUBLIC SFML::Graphics)
 
-target_include_directories(main PRIVATE include)
-target_compile_features(main PRIVATE cxx_std_17)
-target_link_libraries(main PRIVATE SFML::Graphics)
-
+add_executable(main src/main.cpp)
+target_link_libraries(main PRIVATE game_logic)
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT main)
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(game_tests tests/GameTests.cpp)
+    target_link_libraries(game_tests PRIVATE game_logic)
+    add_test(NAME gameplay COMMAND game_tests)
+endif()
+
+if(WIN32 AND BUILD_SHARED_LIBS)
+    add_custom_command(TARGET main POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:main> $<TARGET_FILE_DIR:main>
+        COMMAND_EXPAND_LISTS)
+endif()

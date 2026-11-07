@@ -1,9 +1,9 @@
-
 #pragma once
 
 #include <SFML/Graphics.hpp>
 #include <array>
 #include <optional>
+#include <vector>
 
 class GameMap {
 public:
@@ -12,26 +12,17 @@ public:
     static constexpr int COLS = 20;
 
     GameMap();
-
-    std::optional<sf::Vector2i> pixelToCell(
-        sf::Vector2i pixel
-    ) const;
-
+    std::optional<sf::Vector2i> pixelToCell(sf::Vector2i pixel) const;
     bool isBuildable(sf::Vector2i cell) const;
-
-    void draw(
-        sf::RenderWindow& window,
-        std::optional<sf::Vector2i> hovered
-    ) const;
+    static sf::Vector2f cellCenter(sf::Vector2i cell);
+    const std::vector<sf::Vector2i>& route() const { return route_; }
+    float routeLength() const;
+    sf::Vector2f positionAlongRoute(float distance) const;
+    void draw(sf::RenderWindow& window, std::optional<sf::Vector2i> hovered) const;
 
 private:
-    enum class TileType {
-        Grass,
-        Path
-    };
-
-    std::array<
-        std::array<TileType, COLS>,
-        ROWS
-    > tiles_{};
+    enum class TileType { Grass, Path };
+    std::array<std::array<TileType, COLS>, ROWS> tiles_{};
+    // Ordered adjacent cells, including entry/exit one cell outside the board.
+    std::vector<sf::Vector2i> route_;
 };

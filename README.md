@@ -1,117 +1,57 @@
-# CMake SFML Project Template
+# Tower Defense — First Stand
 
-This repository template should allow for a fast and hassle-free kick start of your next SFML project using CMake.
-Thanks to [GitHub's nature of templates](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template), you can fork this repository without inheriting its Git history.
+A playable C++17 / SFML 3.1 tower-defense prototype. Build a defense, survive one wave, and restart to try another layout.
 
-The template starts out very basic, but might receive additional features over time:
+## Play
 
-- Basic CMake script to build your project and link SFML on any operating system
-- Basic [GitHub Actions](https://github.com/features/actions) script for all major platforms
+- **Left click a grass tile:** buy a tower for 50 coins. The preview shows its range; red indicates an invalid purchase.
+- **Space / Start Wave:** launch the 12-enemy wave. During combat, Space toggles pause.
+- **P / Pause:** pause or resume. Losing window focus pauses combat automatically.
+- **R / Restart:** reset the complete game, including towers, enemies, lives and coins.
+- **Escape:** close the window.
 
-## Quick start
+You begin with **150 coins and 5 lives**. Each defeated enemy awards **15 coins**. Each enemy reaching the exit costs one life. Clear all 12 enemies with at least one life remaining to win; reaching zero lives ends the game. Towers may be purchased during combat, but not while paused or after a result.
 
-### Command line
+Towers target the enemy furthest along the route within their 125-pixel range. They deal 20 damage every 0.6 seconds; enemies have 60 health and move at 70 pixels per second. Hits are immediate, with a short beam flash for feedback.
 
-1. Install [Git](https://git-scm.com/downloads) and [CMake](https://cmake.org/download/). Use your system's package manager if available.
-2. Follow [GitHub's instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for how to use their project template feature to create your own project. If you don't want to use GitHub, see the section below.
-3. Clone your new GitHub repo and open the repo in your text editor of choice.
-4. Open [CMakeLists.txt](CMakeLists.txt). Rename the project and the target name of the executable to whatever name you want. Make sure to change all occurrences.
-5. If you want to add or remove any .cpp files, change the source files listed in the `add_executable` call in CMakeLists.txt to match the source files your project requires. If you plan on keeping the default main.cpp file then no changes are required.
-6. If your code uses the Audio or Network modules then add `SFML::Audio` or `SFML::Network` to the `target_link_libraries` call alongside the existing `SFML::Graphics` library that is being linked.
-7. If you use Linux, install SFML's dependencies using your system package manager. On Ubuntu and other Debian-based distributions you can use the following commands:
-   ```
-   sudo apt update
-   sudo apt install \
-       libxrandr-dev \
-       libxcursor-dev \
-       libxi-dev \
-       libudev-dev \
-       libfreetype-dev \
-       libflac-dev \
-       libvorbis-dev \
-       libgl1-mesa-dev \
-       libegl1-mesa-dev \
-       libfreetype-dev \
-       libharfbuzz-dev \
-       libmbedtls-dev \
-       libssh2-1-dev
-   ```
-8. Configure and build your project. Most popular IDEs support CMake projects with very little effort on your part.
+A starter layout uses grass just above the first horizontal path, above the lower horizontal path, and above the final horizontal path. There is intentionally one tower type and one wave in this first playable loop.
 
-   - [VS Code](https://code.visualstudio.com) via the [CMake extension](https://code.visualstudio.com/docs/cpp/cmake-linux)
-   - [Visual Studio](https://docs.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio?view=msvc-170)
-   - [CLion](https://www.jetbrains.com/clion/features/cmake-support.html)
-   - [Qt Creator](https://doc.qt.io/qtcreator/creator-project-cmake.html)
+## Build and run
 
-   Using CMake from the command line is straightforward as well.
-   Be sure to run these commands in the root directory of the project you just created.
+Requires CMake 3.28+, Git, a C++17 compiler, and an internet connection for the initial SFML/dependency download. On Windows, install Visual Studio Build Tools with the C++ desktop workload and Windows SDK.
 
-   ```
-   cmake -B build
-   cmake --build build
-   ```
+```powershell
+cmake -S . -B build -DSFML_BUILD_AUDIO=OFF -DSFML_BUILD_NETWORK=OFF -DBUILD_SHARED_LIBS=OFF
+cmake --build build --config Release
+.\build\bin\Release\main.exe
+```
 
-9. Enjoy!
+For single-configuration generators such as Ninja, use `-DCMAKE_BUILD_TYPE=Release`; the executable is normally `build/bin/main` instead. Linux needs SFML's development dependencies (OpenGL, X11 extensions, udev, FreeType and HarfBuzz). See the [SFML CMake template](https://github.com/SFML/cmake-sfml-project) for platform setup.
 
-### Visual Studio
+All visual assets are drawn in code, including a small bitmap alphabet, so there are no font or image paths to configure.
 
-Using a Visual Studio workspace is the simplest way to get started on windows.
+## Structure
 
-1. Ensure you have the [required components installed](https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio#installation).
-2. Follow [GitHub's instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template) for how to use their project template feature to create your own project.
-3. If you have already cloned this repo, you can [open the folder](https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio0#ide-integration).
-4. If not, you can [clone it directly in Visual Studio](https://learn.microsoft.com/en-us/visualstudio/get-started/tutorial-open-project-from-repo).
+- `GameMap`: ordered, adjacent route cells; grass/path drawing; coordinate conversion; route interpolation.
+- `Game`: wave spawning, placement rules, targeting, damage, economy, lives, pause, and results.
+- `main.cpp`: input, fixed 60 Hz simulation updates, drawing, HUD and buttons.
+- `PixelText`: embedded 5x7 bitmap text for the UI.
 
-Visual Studio should automatically configure the CMake project, then you can build and run as normal through Visual Studio. See the links above for more details.
+The map is generated from the same ordered route used for movement. Entry and exit are one cell outside the board; corners are included once. Enemies carry distance traveled, so movement follows each segment without skipping turns. The simulation uses a fixed timestep and limits catch-up after a stalled frame.
 
-## Upgrading SFML
+## Checks
 
-SFML is found via CMake's [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html) module.
-FetchContent automatically downloads SFML from GitHub and builds it alongside your own code.
-Beyond the convenience of not having to install SFML yourself, this ensures ABI compatibility and simplifies things like specifying static versus shared libraries.
+```powershell
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
 
-Modifying what version of SFML you want is as easy as changing the `GIT_TAG` argument.
-Currently it uses SFML 3 via the `3.1.0` tag.
+The executable checks route continuity and corner positions, placement bounds, occupied tiles, insufficient currency, pause, a winning layout, the undefended loss case, reward accounting, and restart. Tests do not open a game window.
 
-## But I want to...
+## Next possibilities
 
-Modify CMake options by adding them as configuration parameters (with a `-D` flag) or by modifying the contents of CMakeCache.txt and rebuilding.
-
-### Not use GitHub
-
-You can use this project without a GitHub account by [downloading the contents](https://github.com/SFML/cmake-sfml-project/archive/refs/heads/master.zip) of the repository as a ZIP archive and unpacking it locally.
-This approach also avoids using Git entirely if you would prefer to not do that.
-
-### Change Compilers
-
-See the variety of [`CMAKE_<LANG>_COMPILER`](https://cmake.org/cmake/help/latest/variable/CMAKE_LANG_COMPILER.html) options.
-In particular you'll want to modify `CMAKE_CXX_COMPILER` to point to the C++ compiler you wish to use.
-
-### Change Compiler Optimizations
-
-CMake abstracts away specific optimizer flags through the [`CMAKE_BUILD_TYPE`](https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html) option.
-By default this project recommends `Release` builds which enable optimizations.
-Other build types include `Debug` builds which enable debug symbols but disable optimizations.
-If you're using a multi-configuration generator (as is often the case on Windows), you can modify the [`CMAKE_CONFIGURATION_TYPES`](https://cmake.org/cmake/help/latest/variable/CMAKE_CONFIGURATION_TYPES.html#variable:CMAKE_CONFIGURATION_TYPES) option.
-
-### Change Generators
-
-While CMake will attempt to pick a suitable default generator, some systems offer a number of generators to choose from.
-Ubuntu, for example, offers Makefiles and Ninja as two potential options.
-For a list of generators, click [here](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html).
-To modify the generator you're using you must reconfigure your project providing a `-G` flag with a value corresponding to the generator you want.
-You can't simply modify an entry in the CMakeCache.txt file unlike the above options.
-Then you may rebuild your project with this new generator.
-
-## More Reading
-
-Here are some useful resources if you want to learn more about CMake:
-
-- [Official CMake Tutorial](https://cmake.org/cmake/help/latest/guide/tutorial/)
-- [How to Use CMake Without the Agonizing Pain - Part 1](https://alexreinking.com/blog/how-to-use-cmake-without-the-agonizing-pain-part-1.html)
-- [How to Use CMake Without the Agonizing Pain - Part 2](https://alexreinking.com/blog/how-to-use-cmake-without-the-agonizing-pain-part-2.html)
-- [Better CMake YouTube series by Jefferon Amstutz](https://www.youtube.com/playlist?list=PL8i3OhJb4FNV10aIZ8oF0AA46HgA2ed8g)
+Multiple waves, tower upgrades, enemy types, sound, and saved scores can build on this loop. Dynamic pathfinding is unnecessary for the current fixed route.
 
 ## License
 
-The source code is dual licensed under Public Domain and MIT -- choose whichever you prefer.
+See [LICENSE.md](LICENSE.md). The project began from the SFML CMake template.
