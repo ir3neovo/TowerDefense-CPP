@@ -12,7 +12,7 @@ A playable C++17 / SFML 3.1 tower-defense prototype. Build a defense, survive on
 - **H / Help:** open a short strategy guide. Simulation stops while help is open.
 - **Escape:** close the window.
 
-You begin with **150 coins and 5 lives**. Each defeated enemy awards **15 coins**. Each enemy reaching the exit costs one life. Clear all 12 enemies with at least one life remaining to win; reaching zero lives ends the game. Towers may be purchased during combat, but not while paused or after a result.
+Begin with **150 coins and 5 lives**. Each defeated enemy awards **15 coins**. Each enemy reaching the exit costs one life. Clear all 12 enemies with at least one life remaining to win; reaching zero lives ends the game. Towers may be purchased during combat, but not while paused or after a result.
 
 Towers have a 125-pixel range and deal 20 base damage every 0.6 seconds. Hits are immediate, with a short beam flash for feedback. Towers use First targeting by default; right-click changes their priority at no cost.
 
@@ -26,12 +26,6 @@ A starter layout uses grass just above the first horizontal path, above the lowe
 | Blue shield | 80 HP, moves at 60 pixels/second; absorbs 75% of damage arriving within its 120-degree forward arc | Attack from the side or rear; its shield turns with the route |
 | Green healer | 45 HP; restores up to 12 HP to the most injured nearby ally every 1.6 seconds, stopping for 0.3 seconds when healing | Right-click towers to prioritize healers |
 | Gold scout | 40 HP; scans 160 pixels ahead for weak coverage and marks it with an amber diamond | Overlap two tower ranges to cancel its warning or sprint |
-
-Healers select the lowest health fraction among injured living allies within 115 pixels, excluding themselves. They cannot overheal or revive dead enemies. Green beams and a brief radius pulse show healing.
-
-Scouts normally move at 70 pixels/second. When their current position is covered by fewer than two towers, they warn for 0.6 seconds, then sprint at 120 pixels/second for up to 1.2 seconds. A 2.4-second cooldown follows. Coverage is checked every simulation tick, so newly placed towers can immediately cancel a warning or sprint. Scouts follow the existing route; they do not create alternate paths. Amber trails show sprinting.
-
-Shields flash when blocking and blocked shots use blue beams. The pause/result panel reports damage blocked, HP healed, and scout sprints. These behaviors are deterministic rules and state transitions, not a trained AI model.
 
 ## Build and run
 
@@ -77,7 +71,6 @@ All 16 cases pass locally with static SFML and with shared SFML on Windows (32 c
 ## Next possibilities
 
 Multiple waves, tower upgrades, additional enemy types, sound, and saved scores can build on this loop. Dynamic pathfinding is unnecessary for the current fixed route.
-
 ## License
 
 See [LICENSE.md](LICENSE.md). The project began from the SFML CMake template.
