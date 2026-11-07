@@ -13,7 +13,8 @@ FetchContent_Declare(SFML
     SYSTEM)
 FetchContent_MakeAvailable(SFML)
 
-add_library(game_logic src/Game.cpp src/GameMap.cpp)
+# Internal code is linked into both executables; it is not a DLL API.
+add_library(game_logic STATIC src/Game.cpp src/GameMap.cpp)
 target_include_directories(game_logic PUBLIC include)
 target_compile_features(game_logic PUBLIC cxx_std_17)
 target_link_libraries(game_logic PUBLIC SFML::Graphics)
@@ -30,7 +31,14 @@ if(BUILD_TESTING)
 endif()
 
 if(WIN32 AND BUILD_SHARED_LIBS)
-    add_custom_command(TARGET main POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:main> $<TARGET_FILE_DIR:main>
-        COMMAND_EXPAND_LISTS)
+    # Each executable must also work when built on its own.
+    foreach(executable IN ITEMS main game_tests)
+        if(TARGET ${executable})
+            add_custom_command(TARGET ${executable} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_RUNTIME_DLLS:${executable}> $<TARGET_FILE_DIR:${executable}>
+                COMMAND_EXPAND_LISTS
+                VERBATIM)
+        endif()
+    endforeach()
 endif()
