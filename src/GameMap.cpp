@@ -42,6 +42,13 @@ sf::Vector2f GameMap::positionAlongRoute(float distance) const {
     return from + (cellCenter(route_[index + 1]) - from) * (step - static_cast<float>(index));
 }
 
+sf::Vector2f GameMap::directionAlongRoute(float distance) const {
+    const auto step = static_cast<std::size_t>(std::clamp(distance, 0.f, routeLength()) / TILE_SIZE);
+    const auto index = std::min(step, route_.size() - 2);
+    const auto delta = route_[index + 1] - route_[index];
+    return {static_cast<float>(delta.x), static_cast<float>(delta.y)};
+}
+
 void GameMap::draw(sf::RenderWindow& window, std::optional<sf::Vector2i> hovered) const {
     sf::RectangleShape tile({TILE_SIZE - 1.f, TILE_SIZE - 1.f});
     for (int row = 0; row < ROWS; ++row) {

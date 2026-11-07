@@ -1,5 +1,15 @@
 #include "Game.hpp"
+#include "EnemyBehavior.hpp"
 #include <algorithm>
+#include <array>
+
+namespace {
+constexpr std::array<EnemyKind, Game::WAVE_SIZE> WAVE = {
+    EnemyKind::Grunt, EnemyKind::Shield, EnemyKind::Healer, EnemyKind::Scout,
+    EnemyKind::Grunt, EnemyKind::Shield, EnemyKind::Healer, EnemyKind::Scout,
+    EnemyKind::Grunt, EnemyKind::Shield, EnemyKind::Healer, EnemyKind::Scout
+};
+}
 
 bool Game::canPlace(sf::Vector2i cell) const {
     if ((phase_ != Phase::Planning && phase_ != Phase::Running) || paused_
@@ -9,9 +19,18 @@ bool Game::canPlace(sf::Vector2i cell) const {
 
 bool Game::placeTower(sf::Vector2i cell) {
     if (!canPlace(cell)) return false;
-    towers_.push_back({cell, 0.f});
+    towers_.push_back({cell, 0.f, Targeting::First});
     coins_ -= TOWER_COST;
     return true;
+}
+
+bool Game::toggleTargeting(sf::Vector2i cell) {
+    if ((phase_ != Phase::Planning && phase_ != Phase::Running) || paused_) return false;
+    for (auto& tower : towers_) if (tower.cell == cell) {
+        tower.targeting = tower.targeting == Targeting::First ? Targeting::HealersFirst : Targeting::First;
+        return true;
+    }
+    return false;
 }
 
 void Game::startWave() {
@@ -33,11 +52,17 @@ void Game::update(float seconds) {
 
     spawnTimer_ -= seconds;
     while (spawned_ < WAVE_SIZE && spawnTimer_ <= 0.f) {
-        enemies_.push_back({});
+        enemies_.push_back(EnemyBehavior::makeEnemy(WAVE[spawned_]));
         ++spawned_;
         spawnTimer_ += SPAWN_INTERVAL;
     }
-    for (auto& enemy : enemies_) enemy.distance += ENEMY_SPEED * seconds;
+    // Abilities inspect a common position snapshot before anybody moves this tick.
+    for (std::size_t i = 0; i < enemies_.size(); ++i) {
+        const auto events = EnemyBehavior::update(i, enemies_, towers_, map, RANGE, seconds, shots_);
+        healedHealth_ += events.healed;
+        if (events.beganDash) ++scoutDashes_;
+    }
+    for (auto& enemy : enemies_) enemy.distance += EnemyBehavior::movementSpeed(enemy) * seconds;
     enemies_.erase(std::remove_if(enemies_.begin(), enemies_.end(), [this](const Enemy& enemy) {
         if (enemy.distance < map.routeLength()) return false;
         ++escaped_;
@@ -49,19 +74,22 @@ void Game::update(float seconds) {
     for (auto& tower : towers_) {
         tower.cooldown = std::max(0.f, tower.cooldown - seconds);
         if (tower.cooldown > 0.f) continue;
-        Enemy* target = nullptr;
+        const auto index = EnemyBehavior::towerTarget(tower, enemies_, map, RANGE);
+        if (!index) continue;
+        auto& target = enemies_[*index];
         const auto center = GameMap::cellCenter(tower.cell);
-        for (auto& enemy : enemies_) {
-            if (enemy.health <= 0) continue;
-            const auto offset = map.positionAlongRoute(enemy.distance) - center;
-            if (offset.x * offset.x + offset.y * offset.y <= RANGE * RANGE
-                && (!target || enemy.distance > target->distance)) target = &enemy;
+        const int damage = EnemyBehavior::damageFrom(target, center, map, DAMAGE);
+        const bool blocked = damage < DAMAGE;
+        if (blocked) {
+            target.state = EnemyState::Guarding;
+            target.stateTime = 0.2f;
+            blockedDamage_ += DAMAGE - damage;
         }
-        if (!target) continue;
-        shots_.push_back({center, map.positionAlongRoute(target->distance), 0.12f});
-        target->health -= DAMAGE;
+        shots_.push_back({center, map.positionAlongRoute(target.distance), 0.12f,
+                          blocked ? ShotKind::Blocked : ShotKind::Damage});
+        target.health -= damage;
         tower.cooldown = FIRE_INTERVAL;
-        if (target->health <= 0) { ++defeated_; coins_ += KILL_REWARD; }
+        if (target.health <= 0) { ++defeated_; coins_ += KILL_REWARD; }
     }
     enemies_.erase(std::remove_if(enemies_.begin(), enemies_.end(), [](const Enemy& enemy) {
         return enemy.health <= 0;

@@ -14,7 +14,7 @@ FetchContent_Declare(SFML
 FetchContent_MakeAvailable(SFML)
 
 # Internal code is linked into both executables; it is not a DLL API.
-add_library(game_logic STATIC src/Game.cpp src/GameMap.cpp)
+add_library(game_logic STATIC src/Game.cpp src/GameMap.cpp src/EnemyBehavior.cpp)
 target_include_directories(game_logic PUBLIC include)
 target_compile_features(game_logic PUBLIC cxx_std_17)
 target_link_libraries(game_logic PUBLIC SFML::Graphics)
@@ -28,11 +28,14 @@ if(BUILD_TESTING)
     add_executable(game_tests tests/GameTests.cpp)
     target_link_libraries(game_tests PRIVATE game_logic)
     add_test(NAME gameplay COMMAND game_tests)
+    add_executable(enemy_behavior_tests tests/EnemyBehaviorTests.cpp)
+    target_link_libraries(enemy_behavior_tests PRIVATE game_logic)
+    add_test(NAME enemy_behavior COMMAND enemy_behavior_tests)
 endif()
 
 if(WIN32 AND BUILD_SHARED_LIBS)
     # Each executable must also work when built on its own.
-    foreach(executable IN ITEMS main game_tests)
+    foreach(executable IN ITEMS main game_tests enemy_behavior_tests)
         if(TARGET ${executable})
             add_custom_command(TARGET ${executable} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different

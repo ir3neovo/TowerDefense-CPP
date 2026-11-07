@@ -1,19 +1,7 @@
 #pragma once
 #include "GameMap.hpp"
+#include "Entities.hpp"
 #include <vector>
-
-struct Enemy {
-    float distance = 0.f;
-    int health = 60;
-};
-struct Tower {
-    sf::Vector2i cell;
-    float cooldown = 0.f;
-};
-struct Shot {
-    sf::Vector2f from, to;
-    float remaining = 0.12f;
-};
 
 enum class Phase { Planning, Running, Won, Lost };
 
@@ -33,6 +21,7 @@ public:
     GameMap map;
     bool canPlace(sf::Vector2i cell) const;
     bool placeTower(sf::Vector2i cell);
+    bool toggleTargeting(sf::Vector2i cell);
     void startWave();
     void togglePause();
     void reset();
@@ -46,6 +35,9 @@ public:
     int spawned() const { return spawned_; }
     int defeated() const { return defeated_; }
     int escaped() const { return escaped_; }
+    int blockedDamage() const { return blockedDamage_; }
+    int healedHealth() const { return healedHealth_; }
+    int scoutDashes() const { return scoutDashes_; }
     const std::vector<Enemy>& enemies() const { return enemies_; }
     const std::vector<Tower>& towers() const { return towers_; }
     const std::vector<Shot>& shots() const { return shots_; }
@@ -55,6 +47,7 @@ private:
     bool paused_ = false;
     int coins_ = STARTING_COINS, lives_ = STARTING_LIVES;
     int spawned_ = 0, defeated_ = 0, escaped_ = 0;
+    int blockedDamage_ = 0, healedHealth_ = 0, scoutDashes_ = 0;
     float spawnTimer_ = 0.f;
     std::vector<Enemy> enemies_;
     std::vector<Tower> towers_;

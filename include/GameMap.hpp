@@ -18,6 +18,7 @@ public:
     const std::vector<sf::Vector2i>& route() const { return route_; }
     float routeLength() const;
     sf::Vector2f positionAlongRoute(float distance) const;
+    sf::Vector2f directionAlongRoute(float distance) const;
     void draw(sf::RenderWindow& window, std::optional<sf::Vector2i> hovered) const;
 
 private:
